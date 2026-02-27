@@ -57,7 +57,7 @@ class ActionServer : NanoHTTPD("127.0.0.1", 8080) {
         val value = json.optString("value")
 
         val svc = UiAccessibilityService.instance
-            ?: return newFixedLengthResponse("application/json", "{\"ok\":false,\"error\":\"accessibility_not_ready\"}")
+            ?: return newFixedLengthResponse(Response.Status.SERVICE_UNAVAILABLE, "application/json", "{\"ok\":false,\"error\":\"accessibility_not_ready\"}")
 
         val result: Any = when (type) {
             "click_text" -> svc.clickText(value)
