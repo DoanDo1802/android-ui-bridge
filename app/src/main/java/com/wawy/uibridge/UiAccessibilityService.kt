@@ -1,6 +1,10 @@
 package com.wawy.uibridge
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
+import android.content.Intent
+import android.graphics.Path
+import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -35,7 +39,7 @@ class UiAccessibilityService : AccessibilityService() {
     fun inputText(value: String): Boolean {
         val root = rootInActiveWindow ?: return false
         val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: return false
-        val args = android.os.Bundle().apply {
+        val args = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
         }
         return focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
@@ -47,6 +51,60 @@ class UiAccessibilityService : AccessibilityService() {
     }
 
     fun goBack(): Boolean = performGlobalAction(GLOBAL_ACTION_BACK)
+    fun goHome(): Boolean = performGlobalAction(GLOBAL_ACTION_HOME)
+    fun openRecents(): Boolean = performGlobalAction(GLOBAL_ACTION_RECENTS)
+
+    fun openApp(packageName: String): Boolean {
+        val intent = packageManager.getLaunchIntentForPackage(packageName) ?: return false
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            startActivity(intent)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun tap(x: Float, y: Float): Boolean {
+        val path = Path().apply { moveTo(x, y) }
+        val stroke = GestureDescription.StrokeDescription(path, 0, 80)
+        val gesture = GestureDescription.Builder().addStroke(stroke).build()
+        return dispatchGesture(gesture, null, null)
+    }
+
+    fun swipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long = 250): Boolean {
+        val path = Path().apply {
+            moveTo(x1, y1)
+            lineTo(x2, y2)
+        }
+        val stroke = GestureDescription.StrokeDescription(path, 0, durationMs)
+        val gesture = GestureDescription.Builder().addStroke(stroke).build()
+        return dispatchGesture(gesture, null, null)
+    }
+
+    fun swipeLeft(): Boolean {
+        val dm = resources.displayMetrics
+        val y = dm.heightPixels * 0.5f
+        return swipe(dm.widthPixels * 0.85f, y, dm.widthPixels * 0.15f, y)
+    }
+
+    fun swipeRight(): Boolean {
+        val dm = resources.displayMetrics
+        val y = dm.heightPixels * 0.5f
+        return swipe(dm.widthPixels * 0.15f, y, dm.widthPixels * 0.85f, y)
+    }
+
+    fun swipeUp(): Boolean {
+        val dm = resources.displayMetrics
+        val x = dm.widthPixels * 0.5f
+        return swipe(x, dm.heightPixels * 0.8f, x, dm.heightPixels * 0.2f)
+    }
+
+    fun swipeDown(): Boolean {
+        val dm = resources.displayMetrics
+        val x = dm.widthPixels * 0.5f
+        return swipe(x, dm.heightPixels * 0.2f, x, dm.heightPixels * 0.8f)
+    }
 
     fun uiTreeSummary(): Map<String, Any?> {
         val root = rootInActiveWindow

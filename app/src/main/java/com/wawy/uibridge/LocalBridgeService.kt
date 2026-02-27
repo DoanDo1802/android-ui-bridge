@@ -56,6 +56,11 @@ class ActionServer : NanoHTTPD("127.0.0.1", 8080) {
         val type = json.optString("type")
         val value = json.optString("value")
 
+        if (type == "health") {
+            val ok = UiAccessibilityService.instance != null
+            return newFixedLengthResponse(Response.Status.OK, "application/json", JSONObject(mapOf("ok" to true, "result" to mapOf("accessibilityReady" to ok))).toString())
+        }
+
         val svc = UiAccessibilityService.instance
             ?: return newFixedLengthResponse(Response.Status.SERVICE_UNAVAILABLE, "application/json", "{\"ok\":false,\"error\":\"accessibility_not_ready\"}")
 
@@ -65,6 +70,27 @@ class ActionServer : NanoHTTPD("127.0.0.1", 8080) {
             "input_text" -> svc.inputText(value)
             "scroll" -> svc.scrollForward()
             "back" -> svc.goBack()
+            "home" -> svc.goHome()
+            "recent" -> svc.openRecents()
+            "open_app" -> svc.openApp(value)
+            "tap" -> {
+                val x = json.optDouble("x", Double.NaN)
+                val y = json.optDouble("y", Double.NaN)
+                if (x.isNaN() || y.isNaN()) false else svc.tap(x.toFloat(), y.toFloat())
+            }
+            "swipe" -> {
+                val x1 = json.optDouble("x1", Double.NaN)
+                val y1 = json.optDouble("y1", Double.NaN)
+                val x2 = json.optDouble("x2", Double.NaN)
+                val y2 = json.optDouble("y2", Double.NaN)
+                val duration = json.optLong("durationMs", 250)
+                if (x1.isNaN() || y1.isNaN() || x2.isNaN() || y2.isNaN()) false
+                else svc.swipe(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), duration)
+            }
+            "swipe_left" -> svc.swipeLeft()
+            "swipe_right" -> svc.swipeRight()
+            "swipe_up" -> svc.swipeUp()
+            "swipe_down" -> svc.swipeDown()
             "get_ui_tree" -> JSONObject(svc.uiTreeSummary())
             else -> return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json", "{\"ok\":false,\"error\":\"unknown_action\"}")
         }
