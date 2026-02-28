@@ -46,7 +46,7 @@ class LocalBridgeService : Service() {
 }
 
 class ActionServer(private val ctx: Service) : NanoHTTPD("127.0.0.1", 8080) {
-    private val captureDir = File(ctx.cacheDir, "captures").apply { mkdirs() }
+    private val captureDir = File("/sdcard/Download/uibridge").apply { mkdirs() }
 
     override fun serve(session: IHTTPSession): Response {
         if (session.method != Method.POST || session.uri != "/action") {

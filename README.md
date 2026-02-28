@@ -70,7 +70,7 @@ curl -s -X POST http://127.0.0.1:8080/action -H 'Content-Type: application/json'
 
 ## Temp screenshot policy
 - Launch UI Bridge app once and **allow screen capture** prompt (MediaProjection).
-- Temp captures are written to app cache (`.../cache/captures`).
+- Temp captures are written to `/sdcard/Download/uibridge` (so agent/Termux can inspect then delete).
 - Use `tap_ratio_ephemeral` for one-shot flow: capture -> tap -> delete immediately.
 - Run `cleanup_captures` as a safety cleanup step.
 - Check readiness with `health` (`captureReady: true`).
