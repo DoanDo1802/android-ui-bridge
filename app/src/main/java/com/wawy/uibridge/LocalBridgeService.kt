@@ -25,7 +25,7 @@ class LocalBridgeService : Service() {
             .build()
 
         startForeground(1001, notif)
-        server = ActionServer()
+        server = ActionServer(this)
         server?.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
     }
 
@@ -45,8 +45,8 @@ class LocalBridgeService : Service() {
     }
 }
 
-class ActionServer : NanoHTTPD("127.0.0.1", 8080) {
-    private val captureDir = File("/data/data/com.wawy.uibridge/cache/captures").apply { mkdirs() }
+class ActionServer(private val ctx: Service) : NanoHTTPD("127.0.0.1", 8080) {
+    private val captureDir = File(ctx.cacheDir, "captures").apply { mkdirs() }
 
     override fun serve(session: IHTTPSession): Response {
         if (session.method != Method.POST || session.uri != "/action") {
@@ -62,7 +62,12 @@ class ActionServer : NanoHTTPD("127.0.0.1", 8080) {
 
         if (type == "health") {
             val ok = UiAccessibilityService.instance != null
-            return newFixedLengthResponse(Response.Status.OK, "application/json", JSONObject(mapOf("ok" to true, "result" to mapOf("accessibilityReady" to ok))).toString())
+            val captureReady = ScreenCaptureManager.hasGrant()
+            return newFixedLengthResponse(
+                Response.Status.OK,
+                "application/json",
+                JSONObject(mapOf("ok" to true, "result" to mapOf("accessibilityReady" to ok, "captureReady" to captureReady))).toString()
+            )
         }
 
         val svc = UiAccessibilityService.instance
@@ -181,6 +186,12 @@ class ActionServer : NanoHTTPD("127.0.0.1", 8080) {
         return try {
             captureDir.mkdirs()
             val out = File(captureDir, "cap_${System.currentTimeMillis()}.png")
+
+            // Preferred path: MediaProjection grant from MainActivity.
+            val mpOk = ScreenCaptureManager.captureToFile(ctx, out)
+            if (mpOk && out.exists() && out.length() > 0) return out
+
+            // Fallback path: shell screencap (may fail on many devices).
             val proc = ProcessBuilder("/system/bin/sh", "-c", "/system/bin/screencap -p ${out.absolutePath}")
                 .redirectErrorStream(true)
                 .start()
