@@ -42,6 +42,9 @@ Supported `type`:
 - `swipe_up`
 - `swipe_down`
 - `macro_youtube` (fields: optional `query`, `pages`, `tapY`)
+- `capture_temp` (temporary screenshot for analysis)
+- `tap_ratio_ephemeral` (capture -> tap -> auto-delete screenshot)
+- `cleanup_captures` (delete all temp captures)
 - `get_ui_tree`
 
 ## Important setup (OPPO/Android 9)
@@ -64,6 +67,11 @@ curl -s -X POST http://127.0.0.1:8080/action -H 'Content-Type: application/json'
 curl -s -X POST http://127.0.0.1:8080/action -H 'Content-Type: application/json' \
   -d '{"type":"tap_ratio","x":0.5,"y":0.56}'
 ```
+
+## Temp screenshot policy
+- Temp captures are written to app cache (`/data/data/com.wawy.uibridge/cache/captures`).
+- Use `tap_ratio_ephemeral` for one-shot flow: capture -> tap -> delete immediately.
+- Run `cleanup_captures` as a safety cleanup step.
 
 ## Notes
 - Prototype quality; add auth token + retries before production use.

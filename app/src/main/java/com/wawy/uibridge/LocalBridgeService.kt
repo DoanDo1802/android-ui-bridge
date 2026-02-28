@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.IBinder
 import fi.iki.elonen.NanoHTTPD
 import org.json.JSONObject
+import java.io.File
+import java.security.MessageDigest
 
 class LocalBridgeService : Service() {
     private var server: ActionServer? = null
@@ -44,6 +46,8 @@ class LocalBridgeService : Service() {
 }
 
 class ActionServer : NanoHTTPD("127.0.0.1", 8080) {
+    private val captureDir = File("/data/data/com.wawy.uibridge/cache/captures").apply { mkdirs() }
+
     override fun serve(session: IHTTPSession): Response {
         if (session.method != Method.POST || session.uri != "/action") {
             return newFixedLengthResponse(Response.Status.NOT_FOUND, "application/json", "{\"ok\":false,\"error\":\"not_found\"}")
@@ -142,11 +146,70 @@ class ActionServer : NanoHTTPD("127.0.0.1", 8080) {
                 val tapped = svc.tap((dm.widthPixels * 0.5f), (dm.heightPixels * tapY).toFloat())
                 okOpen && tapped
             }
+            "capture_temp" -> {
+                val cap = captureNow()
+                if (cap == null) JSONObject(mapOf("ok" to false))
+                else JSONObject(mapOf(
+                    "ok" to true,
+                    "path" to cap.absolutePath,
+                    "size" to cap.length(),
+                    "sha1" to sha1Of(cap)
+                ))
+            }
+            "tap_ratio_ephemeral" -> {
+                val xr = json.optDouble("x", 0.5)
+                val yr = json.optDouble("y", 0.5)
+                val cap = captureNow()
+                val dm = svc.resources.displayMetrics
+                val tapped = svc.tap((dm.widthPixels * xr).toFloat(), (dm.heightPixels * yr).toFloat())
+                if (cap != null) cap.delete()
+                tapped
+            }
+            "cleanup_captures" -> {
+                cleanupCaptures()
+                true
+            }
             "get_ui_tree" -> JSONObject(svc.uiTreeSummary())
             else -> return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json", "{\"ok\":false,\"error\":\"unknown_action\"}")
         }
 
         val res = JSONObject().put("ok", true).put("result", result).toString()
         return newFixedLengthResponse(Response.Status.OK, "application/json", res)
+    }
+
+    private fun captureNow(): File? {
+        return try {
+            captureDir.mkdirs()
+            val out = File(captureDir, "cap_${System.currentTimeMillis()}.png")
+            val proc = ProcessBuilder("/system/bin/sh", "-c", "/system/bin/screencap -p ${out.absolutePath}")
+                .redirectErrorStream(true)
+                .start()
+            proc.waitFor()
+            if (out.exists() && out.length() > 0) out else null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun cleanupCaptures() {
+        if (!captureDir.exists()) return
+        captureDir.listFiles()?.forEach { it.delete() }
+    }
+
+    private fun sha1Of(file: File): String {
+        return try {
+            val md = MessageDigest.getInstance("SHA-1")
+            file.inputStream().use { input ->
+                val buf = ByteArray(8192)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n <= 0) break
+                    md.update(buf, 0, n)
+                }
+            }
+            md.digest().joinToString("") { "%02x".format(it) }
+        } catch (_: Exception) {
+            ""
+        }
     }
 }
