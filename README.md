@@ -24,6 +24,7 @@ curl -s -X POST http://127.0.0.1:8080/action \
 
 Supported `type`:
 - `health`
+- `status` (active package + screen width/height)
 - `click_text`
 - `click_id`
 - `input_text`
@@ -33,11 +34,14 @@ Supported `type`:
 - `recent`
 - `open_app` (value: package name, e.g. `com.google.android.youtube`)
 - `tap` (fields: `x`, `y`)
+- `tap_ratio` (fields: `x`,`y` in range 0..1)
 - `swipe` (fields: `x1`, `y1`, `x2`, `y2`, optional `durationMs`)
+- `swipe_pages` (fields: `count`, optional `direction` = `up|down|left|right`)
 - `swipe_left`
 - `swipe_right`
 - `swipe_up`
 - `swipe_down`
+- `macro_youtube` (fields: optional `query`, `pages`, `tapY`)
 - `get_ui_tree`
 
 ## Important setup (OPPO/Android 9)
@@ -48,17 +52,17 @@ Supported `type`:
 
 ## Quick YouTube smoke test
 ```bash
-# Open YouTube app
+# One-shot macro: open YouTube, search, scroll pages, open one result
+curl -s -X POST http://127.0.0.1:8080/action -H 'Content-Type: application/json' \
+  -d '{"type":"macro_youtube","query":"a do mixi na na na a phung thanh do","pages":3,"tapY":0.56}'
+
+# Or manual with ratio tap (0..1)
 curl -s -X POST http://127.0.0.1:8080/action -H 'Content-Type: application/json' \
   -d '{"type":"open_app","value":"com.google.android.youtube"}'
-
-# Swipe up to browse
 curl -s -X POST http://127.0.0.1:8080/action -H 'Content-Type: application/json' \
-  -d '{"type":"swipe_up"}'
-
-# Tap roughly center (adjust by your screen)
+  -d '{"type":"swipe_pages","count":2,"direction":"up"}'
 curl -s -X POST http://127.0.0.1:8080/action -H 'Content-Type: application/json' \
-  -d '{"type":"tap","x":540,"y":1200}'
+  -d '{"type":"tap_ratio","x":0.5,"y":0.56}'
 ```
 
 ## Notes

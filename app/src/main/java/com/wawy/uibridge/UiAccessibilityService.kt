@@ -124,6 +124,16 @@ class UiAccessibilityService : AccessibilityService() {
         return mapOf("package" to root?.packageName?.toString(), "nodes" to nodes)
     }
 
+    fun statusSummary(): Map<String, Any?> {
+        val root = rootInActiveWindow
+        val dm = resources.displayMetrics
+        return mapOf(
+            "package" to root?.packageName?.toString(),
+            "screen" to mapOf("width" to dm.widthPixels, "height" to dm.heightPixels),
+            "accessibilityReady" to true
+        )
+    }
+
     private fun clickParent(node: AccessibilityNodeInfo): Boolean {
         var p = node.parent
         while (p != null) {
